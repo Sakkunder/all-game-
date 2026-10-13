@@ -1,0 +1,1801 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>氷の惑星からの脱出 - Escape from Ice Planet</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&family=Zen+Kaku+Gothic+New:wght@500;700;900&display=swap');
+        
+        body {
+            font-family: 'Zen Kaku Gothic New', 'Outfit', sans-serif;
+            background-color: #030712;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .glow-cyan {
+            box-shadow: 0 0 20px rgba(6, 182, 212, 0.4), inset 0 0 10px rgba(6, 182, 212, 0.2);
+        }
+        .glow-btn {
+            box-shadow: 0 0 15px rgba(14, 165, 233, 0.5);
+            transition: all 0.2s ease;
+        }
+        .glow-btn:hover {
+            box-shadow: 0 0 25px rgba(56, 189, 248, 0.8);
+            transform: translateY(-1px);
+        }
+
+        /* Character Selection Glow */
+        .char-card {
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .char-card.selected {
+            border-color: #38bdf8 !important;
+            background-color: rgba(14, 165, 233, 0.15) !important;
+            box-shadow: 0 0 25px rgba(56, 189, 248, 0.6), inset 0 0 15px rgba(56, 189, 248, 0.3) !important;
+            transform: scale(1.03);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.6);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #38bdf8;
+            border-radius: 4px;
+        }
+
+        /* Modal Blur */
+        .modal-backdrop {
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+
+        /* Pulse animation for low stat */
+        @keyframes pulse-danger {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+        .animate-danger {
+            animation: pulse-danger 1s infinite;
+        }
+
+        canvas {
+            image-rendering: pixelated;
+        }
+    </style>
+</head>
+
+<audio id="myAudio" src="music.mp3"></audio>
+
+
+<body class="h-screen w-screen overflow-hidden text-slate-100 flex flex-col justify-between">
+
+    <!-- TITLE / CHARACTER SELECTION MODAL -->
+    <div id="title-screen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/95 modal-backdrop p-4 overflow-y-auto">
+        <div class="bg-slate-900/90 border border-sky-500/30 rounded-3xl p-6 md:p-8 max-w-2xl w-full text-center shadow-2xl relative">
+            <div class="inline-block px-4 py-1 rounded-full bg-sky-500/10 border border-sky-400/30 text-sky-300 text-xs font-bold mb-3 tracking-widest uppercase">
+                SF Survival Adventure
+            </div>
+            <h1 class="text-3xl md:text-5xl font-extrabold tracking-wider bg-clip-text text-transparent bg-gradient-to-r from-sky-400 via-cyan-200 to-blue-500 mb-2">
+                氷の惑星からの脱出
+            </h1>
+            <p class="text-slate-400 text-xs md:text-sm mb-6">
+                墜落した宇宙船のパーツを集め、極寒の無人惑星から脱出せよ！
+            </p>
+
+            <!-- Name Input -->
+            <div class="mb-6 text-left max-w-md mx-auto">
+                <label class="block text-xs font-bold text-sky-300 mb-2">
+                    <i class="fa-solid fa-user-astronaut mr-1"></i> プレイヤーネーム
+                </label>
+                <input type="text" id="player-name-input" value="サバイバー" maxlength="12"
+                    class="w-full bg-slate-950 border border-slate-700 focus:border-sky-400 rounded-xl px-4 py-3 text-slate-100 text-sm outline-none focus:ring-2 focus:ring-sky-500/40 transition">
+            </div>
+
+            <!-- Character Selection -->
+            <div class="mb-6 text-left">
+                <label class="block text-xs font-bold text-sky-300 mb-3">
+                    <i class="fa-solid fa-users-gear mr-1"></i> キャラクター選択
+                </label>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <button onclick="selectChar('explorer')" id="char-btn-explorer" 
+                        class="char-card selected p-4 rounded-2xl border border-slate-800 bg-slate-950/60 text-left flex flex-col justify-between cursor-pointer">
+                        <div>
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="font-bold text-sky-300 text-sm">探検家</span>
+                                <i class="fa-solid fa-person-hiking text-2xl text-sky-400"></i>
+                            </div>
+                            <p class="text-[11px] text-slate-400 leading-relaxed mb-3">移動速度が高く、スタミナと水分の消費が少ない標準体質。</p>
+                        </div>
+                        <div class="text-[10px] text-sky-400 font-semibold bg-sky-950/50 px-2 py-1 rounded">移動速度 +15%</div>
+                    </button>
+
+                    <button onclick="selectChar('robot')" id="char-btn-robot" 
+                        class="char-card p-4 rounded-2xl border border-slate-800 bg-slate-950/60 text-left flex flex-col justify-between cursor-pointer">
+                        <div>
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="font-bold text-cyan-300 text-sm">ロボット</span>
+                                <i class="fa-solid fa-robot text-2xl text-cyan-400"></i>
+                            </div>
+                            <p class="text-[11px] text-slate-400 leading-relaxed mb-3">最大HPが高く攻撃力に長ける。水分の減りが早い。</p>
+                        </div>
+                        <div class="text-[10px] text-cyan-400 font-semibold bg-cyan-950/50 px-2 py-1 rounded">最大HP 150 / 攻撃+5</div>
+                    </button>
+
+                    <button onclick="selectChar('cyborg')" id="char-btn-cyborg" 
+                        class="char-card p-4 rounded-2xl border border-slate-800 bg-slate-950/60 text-left flex flex-col justify-between cursor-pointer">
+                        <div>
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="font-bold text-emerald-300 text-sm">サイボーグ</span>
+                                <i class="fa-solid fa-user-ninja text-2xl text-emerald-400"></i>
+                            </div>
+                            <p class="text-[11px] text-slate-400 leading-relaxed mb-3">素材の採掘効率に優れ、飢餓に強い強化人間。</p>
+                        </div>
+                        <div class="text-[10px] text-emerald-400 font-semibold bg-emerald-950/50 px-2 py-1 rounded">採掘ダメージ +1</div>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Start Button -->
+            <button onclick="startGame()" class="w-full py-4 rounded-2xl bg-gradient-to-r from-sky-500 to-cyan-500 font-extrabold text-base tracking-wider text-slate-950 glow-btn active:scale-95 transition">
+                <i class="fa-solid fa-rocket mr-2"></i> 惑星探索を開始する
+            </button>
+        </div>
+    </div>
+
+    <!-- GAME CANVAS CONTAINER -->
+    <div class="relative w-full h-full flex-grow overflow-hidden bg-slate-950">
+        <canvas id="gameCanvas" class="w-full h-full block cursor-crosshair"></canvas>
+
+        <!-- TOP HUD OVERLAY -->
+        <div class="absolute top-3 left-3 right-3 flex flex-wrap items-start justify-between pointer-events-none gap-2">
+            <!-- Left: Stats -->
+            <div class="bg-slate-900/85 backdrop-blur-md border border-slate-800 rounded-2xl p-3 shadow-xl pointer-events-auto flex flex-col gap-2 min-w-[200px]">
+                <div class="flex items-center justify-between text-xs font-bold gap-1">
+                    <span id="hud-player-name" class="text-sky-300 truncate max-w-[80px]">サバイバー</span>
+                    <button onclick="BGM.toggleMute()" class="text-slate-400 hover:text-white px-1.5 py-0.5 bg-slate-800 border border-slate-700/60 rounded-md text-[10px] flex items-center gap-1 transition active:scale-95" title="BGM 音量切替">
+                        <i id="bgm-mute-icon" class="fa-solid fa-volume-high text-sky-400"></i>
+                        <span>BGM</span>
+                    </button>
+                    <span id="hud-location" class="text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded-full">地上（氷原）</span>
+                </div>
+
+                <!-- Eco Mode Timer -->
+                <div id="eco-buff-badge" class="hidden text-[10px] bg-emerald-500/20 border border-emerald-400/50 text-emerald-300 font-bold px-2 py-0.5 rounded-md flex items-center justify-between animate-pulse">
+                    <span><i class="fa-solid fa-leaf mr-1"></i> 省エネモード（減り1/3）</span>
+                    <span id="eco-time">30s</span>
+                </div>
+
+                <!-- HP Bar -->
+                <div>
+                    <div class="flex justify-between text-[10px] text-slate-400 mb-0.5 font-semibold">
+                        <span><i class="fa-solid fa-heart text-rose-500 mr-1"></i> HP</span>
+                        <span id="hp-text">100/100</span>
+                    </div>
+                    <div class="w-full bg-slate-950 h-2.5 rounded-full overflow-hidden border border-slate-800">
+                        <div id="hp-bar" class="h-full bg-gradient-to-r from-rose-600 to-emerald-500 transition-all duration-200" style="width: 100%"></div>
+                    </div>
+                </div>
+
+                <!-- Hunger Bar -->
+                <div>
+                    <div class="flex justify-between text-[10px] text-slate-400 mb-0.5 font-semibold">
+                        <span><i class="fa-solid fa-drumstick-bite text-amber-500 mr-1"></i> 満腹度</span>
+                        <span id="hunger-text">100%</span>
+                    </div>
+                    <div class="w-full bg-slate-950 h-2 rounded-full overflow-hidden border border-slate-800">
+                        <div id="hunger-bar" class="h-full bg-amber-500 transition-all duration-200" style="width: 100%"></div>
+                    </div>
+                </div>
+
+                <!-- Hydration Bar -->
+                <div>
+                    <div class="flex justify-between text-[10px] text-slate-400 mb-0.5 font-semibold">
+                        <span><i class="fa-solid fa-droplet text-cyan-400 mr-1"></i> 水分</span>
+                        <span id="hydration-text">100%</span>
+                    </div>
+                    <div class="w-full bg-slate-950 h-2 rounded-full overflow-hidden border border-slate-800">
+                        <div id="hydration-bar" class="h-full bg-cyan-400 transition-all duration-200" style="width: 100%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Top: Quest & Menu Trigger -->
+            <div class="flex flex-col items-end gap-2 pointer-events-auto">
+                <!-- Quest Tracker -->
+                <div class="bg-slate-900/85 backdrop-blur-md border border-slate-800 rounded-2xl p-3 shadow-xl max-w-[240px] text-right">
+                    <div class="text-[10px] font-bold text-sky-400 uppercase tracking-widest mb-1">
+                        <i class="fa-solid fa-compass mr-1"></i> 脱出ミッション
+                    </div>
+                    <div id="quest-text" class="text-xs font-medium text-slate-200 mb-2">
+                        宇宙船の修理パーツを制作して納品しよう！
+                    </div>
+                    <div id="quest-items-status" class="space-y-1 text-[11px] text-slate-300">
+                        <!-- Dynamic quest items status -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT SIDE: QUICK EQUIP & CONSUME SIDEBAR -->
+        <div class="absolute right-3 top-1/2 -translate-y-1/2 flex flex-col gap-3 pointer-events-auto bg-slate-900/85 backdrop-blur-md border border-slate-800 p-2.5 rounded-2xl shadow-2xl max-h-[75vh] w-28 overflow-y-auto z-30">
+            <!-- Equipment Section -->
+            <div>
+                <div class="text-[10px] font-bold text-center text-sky-400 mb-1.5 border-b border-slate-800 pb-1 uppercase tracking-wider">
+                    <i class="fa-solid fa-hand-fist mr-1"></i>装備
+                </div>
+                <div id="quick-equip-list" class="flex flex-col gap-1.5">
+                    <!-- Quick equip items dynamically inserted -->
+                </div>
+            </div>
+
+            <!-- Quick Food & Water Section -->
+            <div class="border-t border-slate-800/80 pt-2">
+                <div class="text-[10px] font-bold text-center text-emerald-400 mb-1.5 border-b border-slate-800 pb-1 uppercase tracking-wider">
+                    <i class="fa-solid fa-utensils mr-1"></i>飲食
+                </div>
+                <div id="quick-food-list" class="flex flex-col gap-1.5">
+                    <!-- Quick consumable items dynamically inserted -->
+                </div>
+            </div>
+        </div>
+
+        <!-- MOBILE VIRTUAL CONTROLS OVERLAY -->
+        <div id="touch-controls" class="absolute bottom-4 left-4 right-4 flex justify-between items-end pointer-events-none md:hidden">
+            <!-- Virtual D-Pad -->
+            <div class="relative w-36 h-36 bg-slate-900/60 rounded-full border border-slate-700/60 backdrop-blur-sm pointer-events-auto flex items-center justify-center">
+                <button id="btn-up" class="absolute top-1 left-1/2 -translate-x-1/2 w-10 h-10 bg-slate-800/80 rounded-lg border border-slate-600 text-slate-200 flex items-center justify-center active:bg-sky-600"><i class="fa-solid fa-chevron-up"></i></button>
+                <button id="btn-down" class="absolute bottom-1 left-1/2 -translate-x-1/2 w-10 h-10 bg-slate-800/80 rounded-lg border border-slate-600 text-slate-200 flex items-center justify-center active:bg-sky-600"><i class="fa-solid fa-chevron-down"></i></button>
+                <button id="btn-left" class="absolute left-1 top-1/2 -translate-y-1/2 w-10 h-10 bg-slate-800/80 rounded-lg border border-slate-600 text-slate-200 flex items-center justify-center active:bg-sky-600"><i class="fa-solid fa-chevron-left"></i></button>
+                <button id="btn-right" class="absolute right-1 top-1/2 -translate-y-1/2 w-10 h-10 bg-slate-800/80 rounded-lg border border-slate-600 text-slate-200 flex items-center justify-center active:bg-sky-600"><i class="fa-solid fa-chevron-right"></i></button>
+            </div>
+
+            <!-- Action Button -->
+            <button id="btn-action" class="w-20 h-20 bg-sky-500/80 border-2 border-sky-300 rounded-full text-slate-950 font-black text-xs shadow-2xl backdrop-blur-sm active:scale-90 transition pointer-events-auto flex flex-col items-center justify-center gap-1">
+                <i class="fa-solid fa-hand-fist text-xl"></i>
+                <span>行動</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- INVENTORY & CRAFTING MODAL -->
+    <div id="inventory-modal" class="fixed inset-0 z-40 hidden bg-slate-950/80 backdrop-blur-md p-4 flex items-center justify-center">
+        <div class="bg-slate-900 border border-slate-700 rounded-3xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+            <!-- Modal Header -->
+            <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-950/50">
+                <div class="flex items-center gap-3">
+                    <i class="fa-solid fa-boxes-stacked text-sky-400 text-xl"></i>
+                    <h2 class="font-extrabold text-lg text-slate-100">バックパック & インベントリ</h2>
+                </div>
+                <button onclick="toggleInventory()" class="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-slate-400 hover:text-white transition">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Modal Content (Grid + Details) -->
+            <div class="flex-grow overflow-y-auto p-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+                <!-- Left: Items Grid -->
+                <div class="md:col-span-2 flex flex-col gap-4">
+                    <h3 class="text-xs font-bold text-sky-300 uppercase tracking-wider">所持アイテム</h3>
+                    <div id="inventory-grid" class="grid grid-cols-4 sm:grid-cols-5 gap-2 max-h-[300px] overflow-y-auto p-1 bg-slate-950/50 rounded-2xl border border-slate-800">
+                        <!-- Items rendered dynamically -->
+                    </div>
+
+                    <!-- Crafting Section -->
+                    <div class="mt-2">
+                        <div class="flex justify-between items-center mb-2">
+                            <h3 class="text-xs font-bold text-amber-300 uppercase tracking-wider">クラフトレシピ</h3>
+                            <div class="flex gap-1">
+                                <button onclick="filterCrafting('all')" class="craft-tab px-2 py-1 bg-sky-600 rounded-md text-[10px] font-bold">すべて</button>
+                                <button onclick="filterCrafting('food')" class="craft-tab px-2 py-1 bg-slate-800 rounded-md text-[10px] font-bold">食料/水</button>
+                                <button onclick="filterCrafting('weapon')" class="craft-tab px-2 py-1 bg-slate-800 rounded-md text-[10px] font-bold">道具/武器</button>
+                                <button onclick="filterCrafting('ship')" class="craft-tab px-2 py-1 bg-slate-800 rounded-md text-[10px] font-bold">宇宙船</button>
+                            </div>
+                        </div>
+
+                        <div id="crafting-list" class="space-y-2 max-h-[220px] overflow-y-auto pr-1">
+                            <!-- Recipes rendered dynamically -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right: Selected Item Details -->
+                <div id="item-detail-panel" class="bg-slate-950/70 border border-slate-800 rounded-2xl p-4 flex flex-col justify-between">
+                    <div class="text-center text-slate-500 py-10">
+                        <i class="fa-solid fa-arrow-pointer text-3xl mb-2 opacity-40"></i>
+                        <p class="text-xs">アイテムを選択すると詳細が表示されます</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- DRAMATIC GAME OVER & RESPAWN OVERLAY -->
+    <div id="death-overlay" class="fixed inset-0 z-50 hidden bg-rose-950/90 backdrop-blur-xl flex flex-col items-center justify-center p-6 text-center">
+        <div class="animate-bounce mb-4 text-rose-500 text-6xl">
+            <i class="fa-solid fa-skull-crossbones"></i>
+        </div>
+        <h2 class="text-4xl md:text-6xl font-black text-rose-400 tracking-wider mb-2">
+            行動不能
+        </h2>
+        <div id="death-reason" class="text-lg md:text-2xl font-bold text-white mb-6 bg-rose-900/50 border border-rose-500/40 px-6 py-3 rounded-2xl shadow-2xl">
+            飢餓により倒れてしまった...
+        </div>
+        <p class="text-slate-300 text-sm max-w-md mb-8">
+            極寒の氷原で意識を失いました。救助ドローンが宇宙船のセーブポイントへと緊急搬送しています。
+        </p>
+        <div class="flex items-center gap-3 text-sky-300 text-sm font-bold bg-slate-900/80 border border-sky-500/40 px-5 py-2.5 rounded-full">
+            <i class="fa-solid fa-spinner animate-spin text-sky-400"></i>
+            <span>宇宙船にて安全に復活中...</span>
+        </div>
+    </div>
+
+    <!-- VICTORY OVERLAY -->
+    <div id="victory-overlay" class="fixed inset-0 z-50 hidden bg-sky-950/95 backdrop-blur-xl flex flex-col items-center justify-center p-6 text-center">
+        <div class="text-amber-400 text-7xl mb-4 animate-bounce">
+            <i class="fa-solid fa-rocket"></i>
+        </div>
+        <h2 class="text-4xl md:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-sky-300 to-amber-300 mb-2">
+            ミッション完了！
+        </h2>
+        <p class="text-slate-200 text-base max-w-lg mb-8 leading-relaxed">
+            見事に宇宙船の修復を終え、極寒の氷の惑星からの脱出に成功しました！
+        </p>
+        <button onclick="location.reload()" class="px-8 py-4 bg-gradient-to-r from-amber-400 to-sky-400 text-slate-950 font-black text-base rounded-2xl glow-btn shadow-2xl">
+            タイトルの戻る
+        </button>
+    </div>
+
+    <script>
+        /* GAME DATA DEFINITIONS */
+        const CHARACTERS = {
+            explorer: { name: '探検家', speed: 210, hp: 100, hungerRate: 1.0, hydraRate: 1.0, atk: 10, mine: 1 },
+            robot: { name: 'ロボット', speed: 180, hp: 150, hungerRate: 0.8, hydraRate: 1.4, atk: 15, mine: 1 },
+            cyborg: { name: 'サイボーグ', speed: 190, hp: 110, hungerRate: 0.9, hydraRate: 1.0, atk: 12, mine: 2 }
+        };
+
+        const ITEMS = {
+            // Food & Water (Added specific numbers & poison risk)
+            meat_raw: { name: '生肉', icon: 'fa-drumstick-bite', color: '#f87171', category: 'food', hunger: 20, poison: 30, poisonDmg: 15, desc: '野生動物の肉。リスク高め。' },
+            meat_cooked: { name: '焼いた肉', icon: 'fa-fire-burner', color: '#fb923c', category: 'food', hunger: 40, poison: 0, desc: '香ばしく焼いた肉。安全で高栄養。' },
+            ration: { name: '保存食', icon: 'fa-box-tissue', color: '#facc15', category: 'food', hunger: 65, hp: 15, poison: 0, desc: '高度非常食。腹持ち抜群。' },
+            water_purified: { name: '精製水', icon: 'fa-bottle-water', color: '#38bdf8', category: 'food', hydra: 60, poison: 0, desc: 'ろ過された極めて安全な飲料水。' },
+            water_ice: { name: '氷水', icon: 'fa-glass-water', color: '#a5f3fc', category: 'food', hydra: 25, poison: 15, poisonDmg: 10, desc: '氷を削った冷水。お腹を壊すリスクあり。' },
+            energy_drink: { name: 'エナジー缶', icon: 'fa-bolt', color: '#4ade80', category: 'food', hydra: 40, hp: 25, poison: 0, desc: '体力を回復させ水分も補給できる万能飲料。' },
+
+            // Raw Materials
+            wood: { name: '木材', icon: 'fa-tree', color: '#a16207', category: 'material', desc: '枯れ木から伐採した頑丈な木材。' },
+            stone: { name: '石材', icon: 'fa-cubes', color: '#94a3b8', category: 'material', desc: '地表の岩石から削り出した石。' },
+            ice: { name: '氷ブロック', icon: 'fa-icicles', color: '#cbd5e1', category: 'material', desc: '解かすと水が得られる純粋な氷。' },
+            iron_ore: { name: '鉄鉱石', icon: 'fa-gem', color: '#f59e0b', category: 'material', desc: '精錬すると鉄になる重い鉱石。' },
+            iron: { name: '鉄インゴット', icon: 'fa-square', color: '#e2e8f0', category: 'material', desc: '加工された頑丈な鉄板。' },
+            gold_ore: { name: '金鉱石', icon: 'fa-coins', color: '#facc15', category: 'material', desc: '希少な金属を含む鉱石。' },
+            gold: { name: '金インゴット', icon: 'fa-coins', color: '#fde047', category: 'material', desc: '電子基板に使われる純度の高い金。' },
+            oil: { name: '油', icon: 'fa-oil-can', color: '#475569', category: 'material', desc: '精製燃料の原料。' },
+            refined_oil: { name: '精製油', icon: 'fa-gas-pump', color: '#ef4444', category: 'material', desc: '宇宙船のハイパワー燃料。' },
+            adamantite: { name: 'アダマンタイト', icon: 'fa-meteor', color: '#c084fc', category: 'material', desc: '超超硬質の宇宙鉱石。' },
+            energy_cube: { name: 'エナジーキューブ', icon: 'fa-cube', color: '#38bdf8', category: 'material', desc: '大電力を充填したバッテリー用素子。' },
+
+            // Tools & Weapons
+            campfire: { name: '焚き火', icon: 'fa-fire', color: '#f97316', category: 'structure', desc: '設置すると肉を焼いたり氷を溶かせる。' },
+            wooden_sword: { name: '木の剣', icon: 'fa-wand-magic', color: '#a7f3d0', category: 'weapon', atk: 12, range: 60, maxDurability: 20, desc: '初心者用の木製剣。（攻撃力+12, 耐久:20）' },
+            stone_sword: { name: '石の剣', icon: 'fa-hand-fist', color: '#cbd5e1', category: 'weapon', atk: 22, range: 75, maxDurability: 35, desc: '攻撃範囲の広い石製剣。（攻撃力+22, 範囲:広, 耐久:35）' },
+            stone_knife: { name: '石のナイフ', icon: 'fa-cut', color: '#f87171', category: 'weapon', atk: 32, range: 45, maxDurability: 25, desc: '射程は短いが威力の高いナイフ。（攻撃力+32, 範囲:狭, 耐久:25）' },
+            stone_pickaxe: { name: '石のつるはし', icon: 'pickaxe', color: '#f59e0b', category: 'weapon', atk: 8, range: 50, minePower: 3, maxDurability: 40, desc: '素材の採掘スピードが大幅UPするつるはし。（採掘力x3, 耐久:40）' },
+
+            // Ship Components
+            ship_armor: { name: '装甲パーツ', icon: 'fa-shield-halved', color: '#94a3b8', category: 'ship', desc: '宇宙船の外壁補強パーツ。' },
+            ship_fuel: { name: '燃料タンク', icon: 'fa-flask-vial', color: '#f43f5e', category: 'ship', desc: '惑星脱出に必要な大容量燃料。' },
+            ship_battery: { name: '高容量バッテリー', icon: 'fa-car-battery', color: '#0ea5e9', category: 'ship', desc: 'メインエンジン起動用バッテリー。' }
+        };
+
+        const RECIPES = [
+            { id: 'water_ice', name: '氷水', cat: 'food', req: { ice: 1 } },
+            { id: 'water_purified', name: '精製水', cat: 'food', req: { ice: 2, wood: 1 } },
+            { id: 'meat_cooked', name: '焼いた肉', cat: 'food', req: { meat_raw: 1, wood: 1 } },
+            { id: 'ration', name: '保存食', cat: 'food', req: { meat_cooked: 2, wood: 2 } },
+            { id: 'energy_drink', name: 'エナジー缶', cat: 'food', req: { water_purified: 1, gold_ore: 1 } },
+            { id: 'campfire', name: '焚き火', cat: 'weapon', req: { wood: 3, oil: 1 } },
+            { id: 'wooden_sword', name: '木の剣', cat: 'weapon', req: { wood: 4 } },
+            { id: 'stone_sword', name: '石の剣', cat: 'weapon', req: { stone: 3, wood: 1 } },
+            { id: 'stone_knife', name: '石のナイフ', cat: 'weapon', req: { stone: 2, wood: 1 } },
+            { id: 'stone_pickaxe', name: '石のつるはし', cat: 'weapon', req: { stone: 4, wood: 2 } },
+            { id: 'iron', name: '鉄インゴット', cat: 'weapon', req: { iron_ore: 2, wood: 1 } },
+            { id: 'gold', name: '金インゴット', cat: 'weapon', req: { gold_ore: 2, wood: 1 } },
+            { id: 'refined_oil', name: '精製油', cat: 'weapon', req: { oil: 2 } },
+            { id: 'ship_armor', name: '装甲パーツ', cat: 'ship', req: { iron: 10, adamantite: 1 } },
+            { id: 'ship_fuel', name: '燃料タンク', cat: 'ship', req: { refined_oil: 3 } },
+            { id: 'ship_battery', name: '高容量バッテリー', cat: 'ship', req: { refined_oil: 1, iron: 20, energy_cube: 5 } }
+        ];
+
+        /* SOUND FX GENERATOR USING WEB AUDIO API */
+        const AudioFX = {
+            ctx: null,
+            init() {
+                if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+            },
+            playHit() {
+                this.init();
+                if (!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(120, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(30, this.ctx.currentTime + 0.15);
+                gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.15);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.15);
+            },
+            playMine() {
+                this.init();
+                if (!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(300, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(80, this.ctx.currentTime + 0.1);
+                gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.1);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.1);
+            },
+            playCraft() {
+                this.init();
+                if (!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(440, this.ctx.currentTime);
+                osc.frequency.setValueAtTime(880, this.ctx.currentTime + 0.1);
+                gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.25);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.25);
+            },
+            playDeath() {
+                this.init();
+                if (!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(200, this.ctx.currentTime);
+                osc.frequency.linearRampToValueAtTime(40, this.ctx.currentTime + 0.8);
+                gain.gain.setValueAtTime(0.4, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.8);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.8);
+            }
+        };
+
+const BGM = {
+    ctx: null,
+    isPlaying: false,
+    isMuted: false,
+    timer: null,
+    step: 0,
+    bpm: 145, // アップテンポでノリの良い速度
+
+    // ラテン/ポピュラー風のシンコペーション・メロディ（0は休符）
+    notes: [
+        329.63, 0, 392.00, 440.00, 0, 523.25, 493.88, 440.00,
+        392.00, 0, 329.63, 293.66, 329.63, 0, 392.00, 0,
+        440.00, 0, 523.25, 587.33, 0, 659.25, 587.33, 523.25,
+        493.88, 523.25, 493.88, 440.00, 392.00, 440.00, 0, 0
+    ],
+
+    // ラテン風ベースライン（ダンサブルなリフレイン）
+    bassNotes: [
+        164.81, 0, 164.81, 196.00, 220.00, 0, 220.00, 246.94,
+        146.83, 0, 146.83, 174.61, 196.00, 0, 196.00, 220.00
+    ],
+
+    init() {
+        if (!this.ctx) {
+            this.ctx = AudioFX.ctx || new (window.AudioContext || window.webkitAudioContext)();
+            AudioFX.ctx = this.ctx;
+        }
+    },
+
+    start() {
+        this.init();
+        if (this.ctx && this.ctx.state === 'suspended') {
+            this.ctx.resume();
+        }
+        if (this.isPlaying) return;
+        this.isPlaying = true;
+        this.step = 0;
+        this.playLoop();
+    },
+
+    stop() {
+        this.isPlaying = false;
+        if (this.timer) {
+            clearTimeout(this.timer);
+            this.timer = null;
+        }
+    },
+
+    toggleMute() {
+        this.isMuted = !this.isMuted;
+        const btnIcon = document.getElementById('bgm-mute-icon');
+        if (btnIcon) {
+            btnIcon.className = this.isMuted ? 'fa-solid fa-volume-xmark text-rose-400' : 'fa-solid fa-volume-high text-sky-400';
+        }
+        return this.isMuted;
+    },
+
+    playLoop() {
+        if (!this.isPlaying) return;
+
+        if (!this.isMuted && this.ctx) {
+            const now = this.ctx.currentTime;
+            const step16 = this.step % 32;
+
+            // 1. メロディ（アコースティック風Triangle波形＋歯切れの良い減衰）
+            const freq = this.notes[step16];
+            if (freq > 0) {
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = 'triangle'; // マリンバやギターのような温かみのある音
+                osc.frequency.setValueAtTime(freq, now);
+
+                gain.gain.setValueAtTime(0.08, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18); // 短くカットして歯切れよく
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start(now);
+                osc.stop(now + 0.18);
+            }
+
+            // 2. ベースライン（ノリを作る低音）
+            const bassFreq = this.bassNotes[this.step % this.bassNotes.length];
+            if (bassFreq > 0) {
+                const bassOsc = this.ctx.createOscillator();
+                const bassGain = this.ctx.createGain();
+
+                bassOsc.type = 'sawtooth'; // 力強いベース
+                bassOsc.frequency.setValueAtTime(bassFreq / 2, now); // 低音域にシフト
+
+                bassGain.gain.setValueAtTime(0.06, now);
+                bassGain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+
+                bassOsc.connect(bassGain);
+                bassGain.connect(this.ctx.destination);
+
+                bassOsc.start(now);
+                bassOsc.stop(now + 0.2);
+            }
+
+            // 3. ドラム・ビート（キック ＆ スネア/ハイハット）
+            // 4つ打ちキックドラム (拍の頭でドン!と鳴る)
+            if (this.step % 4 === 0) {
+                const kick = this.ctx.createOscillator();
+                const kickGain = this.ctx.createGain();
+
+                kick.type = 'sine';
+                kick.frequency.setValueAtTime(130, now);
+                kick.frequency.exponentialRampToValueAtTime(30, now + 0.1);
+
+                kickGain.gain.setValueAtTime(0.12, now);
+                kickGain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+
+                kick.connect(kickGain);
+                kickGain.connect(this.ctx.destination);
+
+                kick.start(now);
+                kick.stop(now + 0.1);
+            }
+
+            // 裏拍スネア/クラップ（タッ!とノリを出す）
+            if (this.step % 8 === 4) {
+                const snare = this.ctx.createOscillator();
+                const snareGain = this.ctx.createGain();
+
+                snare.type = 'triangle';
+                snare.frequency.setValueAtTime(220, now);
+                snare.frequency.exponentialRampToValueAtTime(80, now + 0.08);
+
+                snareGain.gain.setValueAtTime(0.07, now);
+                snareGain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+
+                snare.connect(snareGain);
+                snareGain.connect(this.ctx.destination);
+
+                snare.start(now);
+                snare.stop(now + 0.08);
+            }
+        }
+
+        this.step++;
+        // BPM145の16分音符のタイマー計算（約103msごと）
+        const interval = (60 / this.bpm / 4) * 1000;
+        this.timer = setTimeout(() => this.playLoop(), interval);
+    }
+};
+
+        // Helper for custom SVG icons
+        function getItemIconHtml(item, extraClass = '') {
+            if (!item) return `<i class="fa-solid fa-gear ${extraClass}"></i>`;
+            if (item.icon === 'pickaxe' || item.icon === 'fa-pickaxe') {
+                return `<svg class="inline-block ${extraClass}" style="color:${item.color}; fill:currentColor;" viewBox="0 0 24 24" width="1em" height="1em"><path d="M14.7 3.3a1 1 0 0 0-1.4 0l-1.6 1.6a1 1 0 0 0 0 1.4l1.3 1.3-9.5 9.5a1 1 0 0 0 0 1.4l1.4 1.4a1 1 0 0 0 1.4 0l9.5-9.5 1.3 1.3a1 1 0 0 0 1.4 0l1.6-1.6a1 1 0 0 0 0-1.4l-5.5-5.5zm-8.8 14.8l-1.4-1.4 8.8-8.8 1.4 1.4-8.8 8.8z"/><path d="M19.5 2.5c-3.5 0-7 2-9 5 3 0 6 1.5 8 4.5 3-2 4.5-5.5 4.5-9a.5.5 0 0 0-.5-.5z"/></svg>`;
+            }
+            return `<i class="fa-solid ${item.icon} ${extraClass}" style="color:${item.color}"></i>`;
+        }
+
+        const TILE_SIZE = 48;
+        const MAP_SIZE = 40;
+
+        /* GAME STATE */
+        let gameState = {
+            charType: 'explorer',
+            playerName: 'サバイバー',
+            mapType: 'surface', // 'surface' or 'cave'
+            player: {
+                x: 10 * TILE_SIZE,
+                y: 10 * TILE_SIZE,
+                vx: 0,
+                vy: 0,
+                hp: 100,
+                maxHp: 100,
+                hunger: 100,
+                hydration: 100,
+                angle: 0,
+                invincibleTimer: 0
+            },
+            ecoBuffTimer: 30, // 30s eco mode
+            equippedWeapon: null,
+            durability: {}, // item_id -> remaining durability
+            inventory: {
+                meat_raw: 2,
+                water_ice: 2,
+                water_purified: 1,
+                wood: 5,
+                stone: 3
+            },
+            shipDelivered: {
+                ship_armor: false,
+                ship_fuel: false,
+                ship_battery: false
+            },
+            resources: [],
+            enemies: [],
+            structures: [],
+            particles: [],
+            floatingTexts: [],
+            caveWalls: [], // grid array for cave walls
+            keys: {},
+            lastActionTime: 0,
+            isDead: false,
+            deadReason: ''
+        };
+
+        let selectedCharType = 'explorer';
+
+        function initWorld() {
+            gameState.resources = [];
+            gameState.enemies = [];
+            gameState.structures = [];
+
+            // Crashed Spaceship on surface
+            gameState.structures.push({
+                x: 10 * TILE_SIZE,
+                y: 10 * TILE_SIZE,
+                type: 'spaceship',
+                size: 80
+            });
+
+            // Surface Resource Node Generation
+            for (let i = 0; i < 45; i++) {
+                const rx = Math.floor(Math.random() * (MAP_SIZE - 4) + 2) * TILE_SIZE;
+                const ry = Math.floor(Math.random() * (MAP_SIZE - 4) + 2) * TILE_SIZE;
+                if (Math.hypot(rx - 10 * TILE_SIZE, ry - 10 * TILE_SIZE) < 150) continue;
+
+                const rType = Math.random();
+                let type = 'tree';
+                if (rType < 0.35) type = 'tree';
+                else if (rType < 0.65) type = 'rock';
+                else if (rType < 0.85) type = 'ice_node';
+                else if (rType < 0.95) type = 'iron_node';
+                else type = 'gold_node';
+
+                gameState.resources.push({
+                    x: rx,
+                    y: ry,
+                    type: type,
+                    hp: 6, // INCREASED RESOURCE DURABILITY
+                    maxHp: 6
+                });
+            }
+
+            // Surface Enemies (Animals)
+            for (let i = 0; i < 12; i++) {
+                const ex = Math.floor(Math.random() * (MAP_SIZE - 4) + 2) * TILE_SIZE;
+                const ey = Math.floor(Math.random() * (MAP_SIZE - 4) + 2) * TILE_SIZE;
+                if (Math.hypot(ex - 10 * TILE_SIZE, ey - 10 * TILE_SIZE) < 300) continue;
+
+                gameState.enemies.push({
+                    x: ex,
+                    y: ey,
+                    vx: 0,
+                    vy: 0,
+                    hp: 60, // INCREASED ENEMY HP
+                    maxHp: 60,
+                    atk: 8,
+                    type: 'beast',
+                    map: 'surface'
+                });
+            }
+
+            // Generate Cave Map & Walls
+            initCaveMap();
+        }
+
+        function initCaveMap() {
+            gameState.caveWalls = [];
+            for (let r = 0; r < MAP_SIZE; r++) {
+                gameState.caveWalls[r] = [];
+                for (let c = 0; c < MAP_SIZE; c++) {
+                    if (r === 0 || r === MAP_SIZE - 1 || c === 0 || c === MAP_SIZE - 1) {
+                        gameState.caveWalls[r][c] = true;
+                    } else if (Math.random() < 0.22 && (r > 4 || c > 4)) {
+                        gameState.caveWalls[r][c] = true;
+                    } else {
+                        gameState.caveWalls[r][c] = false;
+                    }
+                }
+            }
+
+            // Cave Enemies (16 Enemies inside cave)
+            for (let i = 0; i < 16; i++) {
+                let r, c;
+                do {
+                    r = Math.floor(Math.random() * (MAP_SIZE - 4)) + 2;
+                    c = Math.floor(Math.random() * (MAP_SIZE - 4)) + 2;
+                } while (gameState.caveWalls[r][c]);
+
+                gameState.enemies.push({
+                    x: c * TILE_SIZE + TILE_SIZE / 2,
+                    y: r * TILE_SIZE + TILE_SIZE / 2,
+                    vx: 0,
+                    vy: 0,
+                    hp: 120, // INCREASED CAVE ENEMY HP
+                    maxHp: 120,
+                    atk: 14,
+                    type: 'cave_monster',
+                    map: 'cave'
+                });
+            }
+        }
+
+        // Raycasting Line-of-Sight Check for Cave Walls
+        function hasLineOfSight(x1, y1, x2, y2) {
+            if (gameState.mapType !== 'cave') return true;
+            const dist = Math.hypot(x2 - x1, y2 - y1);
+            const steps = Math.ceil(dist / 16);
+            for (let i = 0; i <= steps; i++) {
+                const checkX = x1 + (x2 - x1) * (i / steps);
+                const checkY = y1 + (y2 - y1) * (i / steps);
+                const c = Math.floor(checkX / TILE_SIZE);
+                const r = Math.floor(checkY / TILE_SIZE);
+                if (r >= 0 && r < MAP_SIZE && c >= 0 && c < MAP_SIZE) {
+                    if (gameState.caveWalls[r][c]) return false;
+                }
+            }
+            return true;
+        }
+
+        /* UI SELECTION & GAME INITIALIZATION */
+        function selectChar(type) {
+            selectedCharType = type;
+            document.querySelectorAll('.char-card').forEach(card => card.classList.remove('selected'));
+            const btn = document.getElementById(`char-btn-${type}`);
+            if (btn) btn.classList.add('selected');
+        }
+
+        function startGame() {
+            const nameInput = document.getElementById('player-name-input');
+            gameState.playerName = nameInput.value.trim() || 'サバイバー';
+            gameState.charType = selectedCharType;
+
+            const charDef = CHARACTERS[selectedCharType];
+            gameState.player.maxHp = charDef.hp;
+            gameState.player.hp = charDef.hp;
+            gameState.player.hunger = 100;
+            gameState.player.hydration = 100;
+            gameState.player.x = 10 * TILE_SIZE;
+            gameState.player.y = 10 * TILE_SIZE;
+            gameState.ecoBuffTimer = 30; // 30s initial eco buff
+
+            document.getElementById('hud-player-name').innerText = gameState.playerName;
+            document.getElementById('title-screen').classList.add('hidden');
+
+            BGM.start();
+
+            initWorld();
+            updateQuickEquipUI();
+            updateInventoryUI();
+            updateQuestTracker();
+
+            lastTime = performance.now();
+            requestAnimationFrame(gameLoop);
+        }
+
+        let isActionPressed = false;
+
+        function handleAction() {
+            const now = performance.now();
+            if (now - gameState.lastActionTime < 220) return; // ~0.22s continuous interval
+            gameState.lastActionTime = now;
+
+            const p = gameState.player;
+            const charDef = CHARACTERS[gameState.charType];
+
+            // Calculate attack/mine power & range based on equipped weapon
+            let weaponAtk = charDef.atk;
+            let weaponRange = 60;
+            let minePower = charDef.mine;
+            const eqId = gameState.equippedWeapon;
+
+            if (eqId && ITEMS[eqId]) {
+                const eq = ITEMS[eqId];
+                if (eq.atk) weaponAtk += eq.atk;
+                if (eq.range) weaponRange = eq.range;
+                if (eq.minePower) minePower *= eq.minePower;
+            }
+
+            // 1. PRIORITIZE ATTACKING NEARBY ENEMIES FIRST!
+            let targetEnemy = null;
+            let minDist = weaponRange;
+
+            gameState.enemies.forEach(e => {
+                if (e.map !== gameState.mapType) return;
+                const d = Math.hypot(e.x - p.x, e.y - p.y);
+                if (d < minDist) {
+                    minDist = d;
+                    targetEnemy = e;
+                }
+            });
+
+            if (targetEnemy) {
+                // Perform Attack on Enemy
+                targetEnemy.hp -= weaponAtk;
+                AudioFX.playHit();
+                spawnParticles(targetEnemy.x, targetEnemy.y, '#ef4444', 8);
+                spawnFloatingText(`-${weaponAtk}`, targetEnemy.x, targetEnemy.y - 20, '#f87171');
+
+                // Consume weapon durability
+                consumeDurability(eqId);
+
+                if (targetEnemy.hp <= 0) {
+                    // Drop Meat / Items
+                    gameState.inventory.meat_raw = (gameState.inventory.meat_raw || 0) + 2;
+                    if (Math.random() < 0.3) gameState.inventory.oil = (gameState.inventory.oil || 0) + 1;
+                    spawnFloatingText('+生肉 x2', targetEnemy.x, targetEnemy.y - 35, '#f87171');
+                    updateInventoryUI();
+                }
+                return;
+            }
+
+            // 2. MINE RESOURCES (If no enemy in reach)
+            let targetResource = null;
+            minDist = 65;
+
+            gameState.resources.forEach(r => {
+                const d = Math.hypot(r.x - p.x, r.y - p.y);
+                if (d < minDist) {
+                    minDist = d;
+                    targetResource = r;
+                }
+            });
+
+            if (targetResource) {
+                targetResource.hp -= minePower;
+                AudioFX.playMine();
+                spawnParticles(targetResource.x, targetResource.y, '#e2e8f0', 6);
+
+                if (targetResource.hp <= 0) {
+                    // Drop Materials
+                    let dropItem = 'stone';
+                    let amount = Math.floor(Math.random() * 3) + 1;
+
+                    if (targetResource.type === 'tree') dropItem = 'wood';
+                    else if (targetResource.type === 'ice_node') dropItem = 'ice';
+                    else if (targetResource.type === 'iron_node') dropItem = 'iron_ore';
+                    else if (targetResource.type === 'gold_node') dropItem = 'gold_ore';
+
+                    gameState.inventory[dropItem] = (gameState.inventory[dropItem] || 0) + amount;
+                    spawnFloatingText(`+${ITEMS[dropItem]?.name || dropItem} x${amount}`, targetResource.x, targetResource.y - 20, '#38bdf8');
+                    updateInventoryUI();
+                }
+
+                // Consume weapon durability
+                consumeDurability(eqId);
+                return;
+            }
+
+            // 3. ENTER / EXIT CAVE PORTALS
+            const cavePortalDist = Math.hypot(p.x - 3 * TILE_SIZE, p.y - 3 * TILE_SIZE);
+            if (cavePortalDist < 50) {
+                if (gameState.mapType === 'surface') {
+                    gameState.mapType = 'cave';
+                    p.x = 2 * TILE_SIZE;
+                    p.y = 2 * TILE_SIZE;
+                    spawnFloatingText('洞窟へ進入', p.x, p.y - 30, '#a855f7');
+                } else {
+                    gameState.mapType = 'surface';
+                    p.x = 4 * TILE_SIZE;
+                    p.y = 4 * TILE_SIZE;
+                    spawnFloatingText('地上へ帰還', p.x, p.y - 30, '#38bdf8');
+                }
+                document.getElementById('hud-location').innerText = gameState.mapType === 'surface' ? '地上（氷原）' : '暗黒洞窟（土・岩）';
+            }
+        }
+
+        function consumeDurability(eqId) {
+            if (!eqId || !ITEMS[eqId] || !ITEMS[eqId].maxDurability) return;
+            if (!gameState.durability[eqId]) gameState.durability[eqId] = ITEMS[eqId].maxDurability;
+
+            gameState.durability[eqId]--;
+            if (gameState.durability[eqId] <= 0) {
+                spawnFloatingText(`${ITEMS[eqId].name}が壊れた！`, gameState.player.x, gameState.player.y - 40, '#f43f5e');
+                delete gameState.inventory[eqId];
+                delete gameState.durability[eqId];
+                gameState.equippedWeapon = null;
+                updateInventoryUI();
+            }
+            updateQuickEquipUI();
+        }
+
+        function equipWeapon(id) {
+            if (gameState.equippedWeapon === id) {
+                gameState.equippedWeapon = null;
+            } else {
+                gameState.equippedWeapon = id;
+                if (!gameState.durability[id] && ITEMS[id]?.maxDurability) {
+                    gameState.durability[id] = ITEMS[id].maxDurability;
+                }
+            }
+            updateQuickEquipUI();
+        }
+
+        function updateQuickEquipUI() {
+            // 1. Equip List
+            const equipContainer = document.getElementById('quick-equip-list');
+            if (equipContainer) {
+                equipContainer.innerHTML = '';
+                const tools = Object.keys(gameState.inventory).filter(id => ITEMS[id]?.category === 'weapon');
+
+                if (tools.length === 0) {
+                    equipContainer.innerHTML = `<div class="text-[9px] text-slate-500 text-center py-1.5">素手</div>`;
+                } else {
+                    tools.forEach(id => {
+                        const item = ITEMS[id];
+                        const isEquipped = gameState.equippedWeapon === id;
+                        const curDur = gameState.durability[id] || item.maxDurability || 1;
+                        const maxDur = item.maxDurability || 1;
+                        const durPct = Math.round((curDur / maxDur) * 100);
+
+                        const btn = document.createElement('button');
+                        btn.onclick = () => equipWeapon(id);
+                        btn.className = `p-1.5 rounded-xl border flex flex-col items-center justify-center relative transition ${isEquipped ? 'bg-sky-500/30 border-sky-400 text-sky-200 ring-2 ring-sky-400/50' : 'bg-slate-950/70 border-slate-700/80 hover:bg-slate-800 text-slate-300'}`;
+                        
+                        btn.innerHTML = `
+                            <div class="text-base mb-0.5 flex items-center justify-center">${getItemIconHtml(item)}</div>
+                            <span class="text-[9px] font-bold text-center leading-tight truncate w-full">${item.name}</span>
+                            <div class="w-full bg-slate-950 h-1 rounded-full overflow-hidden mt-1 border border-slate-800">
+                                <div class="h-full bg-sky-400" style="width:${durPct}%"></div>
+                            </div>
+                        `;
+                        equipContainer.appendChild(btn);
+                    });
+                }
+            }
+
+            // 2. Food & Water List (Quick Consume)
+            const foodContainer = document.getElementById('quick-food-list');
+            if (foodContainer) {
+                foodContainer.innerHTML = '';
+                const foods = Object.keys(gameState.inventory).filter(id => ITEMS[id]?.category === 'food');
+
+                if (foods.length === 0) {
+                    foodContainer.innerHTML = `<div class="text-[9px] text-slate-500 text-center py-1.5">なし</div>`;
+                } else {
+                    foods.forEach(id => {
+                        const item = ITEMS[id];
+                        const qty = gameState.inventory[id];
+
+                        // Build stat tag string (e.g., 満腹+20, 水分+25, リスク15%)
+                        let statsTag = '';
+                        if (item.hunger) statsTag += `満腹+${item.hunger} `;
+                        if (item.hydra) statsTag += `水分+${item.hydra} `;
+                        if (item.hp) statsTag += `HP+${item.hp} `;
+
+                        let riskBadge = '';
+                        if (item.poison && item.poison > 0) {
+                            riskBadge = `<span class="text-[8px] text-rose-400 font-bold bg-rose-950/80 border border-rose-500/40 px-1 rounded">リスク ${item.poison}%</span>`;
+                        } else {
+                            riskBadge = `<span class="text-[8px] text-emerald-400 font-bold bg-emerald-950/80 border border-emerald-500/40 px-1 rounded">安全</span>`;
+                        }
+
+                        const btn = document.createElement('button');
+                        btn.onclick = () => useItem(id);
+                        btn.className = 'p-1.5 rounded-xl border border-slate-700/80 bg-slate-950/70 hover:bg-slate-800 flex flex-col items-center justify-center relative transition active:scale-95 text-left';
+
+                        btn.innerHTML = `
+                            <div class="flex items-center justify-between w-full mb-0.5">
+                                <div class="text-base flex items-center justify-center">${getItemIconHtml(item)}</div>
+                                <span class="bg-sky-950 border border-sky-500/50 text-sky-200 text-[9px] px-1 rounded font-black">${qty}</span>
+                            </div>
+                            <span class="text-[9px] font-bold text-slate-200 truncate w-full text-center">${item.name}</span>
+                            <div class="text-[8px] font-semibold text-sky-300 scale-90 -my-0.5 text-center truncate w-full">${statsTag}</div>
+                            <div class="mt-0.5 flex justify-center w-full">${riskBadge}</div>
+                        `;
+                        foodContainer.appendChild(btn);
+                    });
+                }
+            }
+        }
+
+        function updateInventoryUI() {
+            const grid = document.getElementById('inventory-grid');
+            grid.innerHTML = '';
+
+            for (let [id, qty] of Object.entries(gameState.inventory)) {
+                const item = ITEMS[id];
+                if (!item) continue;
+
+                const slot = document.createElement('div');
+                slot.className = 'bg-slate-900/90 border border-slate-700 hover:border-sky-400 p-2 rounded-xl flex flex-col items-center justify-center cursor-pointer relative transition';
+                slot.onclick = () => selectItemDetail(id);
+
+                let durBarHtml = '';
+                if (item.maxDurability && gameState.durability[id]) {
+                    const pct = (gameState.durability[id] / item.maxDurability) * 100;
+                    durBarHtml = `<div class="w-full bg-slate-950 h-1 rounded-full overflow-hidden mt-1"><div class="h-full bg-emerald-400" style="width:${pct}%"></div></div>`;
+                }
+
+                slot.innerHTML = `
+                    <div class="text-xl mb-1 flex items-center justify-center">${getItemIconHtml(item)}</div>
+                    <span class="text-[10px] font-medium text-slate-300 truncate w-full text-center">${item.name}</span>
+                    <span class="absolute top-1 right-1 bg-sky-950 border border-sky-500/40 text-sky-200 text-[10px] px-1.5 rounded-md font-bold">${qty}</span>
+                    ${durBarHtml}
+                `;
+                grid.appendChild(slot);
+            }
+        }
+
+        function selectItemDetail(id) {
+            const item = ITEMS[id];
+            const qty = gameState.inventory[id] || 0;
+            const panel = document.getElementById('item-detail-panel');
+            const durText = item.maxDurability && gameState.durability[id] ? `<div class="text-xs text-amber-300">耐久値: ${gameState.durability[id]} / ${item.maxDurability}</div>` : '';
+
+            // Generate detailed numeric breakdown
+            let statsHtml = '';
+            if (item.category === 'food') {
+                statsHtml = `
+                    <div class="w-full bg-slate-900/90 border border-slate-800 rounded-xl p-2.5 my-2 space-y-1 text-left text-xs">
+                        <div class="font-bold text-sky-300 text-[11px] mb-1"><i class="fa-solid fa-chart-simple mr-1"></i>回復・効果数値</div>
+                        ${item.hunger ? `<div class="flex justify-between"><span class="text-slate-400">満腹度:</span><span class="font-bold text-amber-400">+${item.hunger}</span></div>` : ''}
+                        ${item.hydra ? `<div class="flex justify-between"><span class="text-slate-400">水分:</span><span class="font-bold text-cyan-400">+${item.hydra}</span></div>` : ''}
+                        ${item.hp ? `<div class="flex justify-between"><span class="text-slate-400">HP回復:</span><span class="font-bold text-emerald-400">+${item.hp}</span></div>` : ''}
+                        ${item.poison && item.poison > 0 ? 
+                            `<div class="flex justify-between pt-1 border-t border-slate-800"><span class="text-rose-400 font-bold">食中毒確率:</span><span class="font-bold text-rose-400">${item.poison}% (HP -${item.poisonDmg || 15})</span></div>` : 
+                            `<div class="flex justify-between pt-1 border-t border-slate-800"><span class="text-emerald-400 font-bold">安全性:</span><span class="font-bold text-emerald-400">リスクなし (100%安全)</span></div>`
+                        }
+                    </div>
+                `;
+            }
+
+            panel.innerHTML = `
+                <div class="flex flex-col items-center text-center gap-1.5">
+                    <div class="text-4xl mt-1 flex items-center justify-center">${getItemIconHtml(item)}</div>
+                    <h3 class="font-bold text-sky-300 text-base">${item.name}</h3>
+                    <p class="text-xs text-slate-400 leading-relaxed">${item.desc}</p>
+                    ${statsHtml}
+                    <div class="text-xs font-semibold text-slate-300">所持数: <span class="text-sky-400">${qty}</span></div>
+                    ${durText}
+                </div>
+                <div class="mt-3 flex flex-col gap-2">
+                    ${item.category === 'food' ? `<button onclick="useItem('${id}')" class="w-full py-2 bg-emerald-600 hover:bg-emerald-500 active:scale-95 rounded-lg font-bold text-xs shadow-lg transition">使用・飲食する</button>` : ''}
+                    ${item.category === 'weapon' ? `<button onclick="equipWeapon('${id}')" class="w-full py-2 bg-amber-600 hover:bg-amber-500 active:scale-95 rounded-lg font-bold text-xs shadow-lg transition">${gameState.equippedWeapon === id ? '装備解除' : '装備する'}</button>` : ''}
+                </div>
+            `;
+        }
+
+        let currentCraftFilter = 'all';
+        function filterCrafting(cat) {
+            currentCraftFilter = cat;
+            document.querySelectorAll('.craft-tab').forEach(t => t.classList.replace('bg-sky-600', 'bg-slate-800'));
+            renderCraftingList();
+        }
+
+        function renderCraftingList() {
+            const list = document.getElementById('crafting-list');
+            list.innerHTML = '';
+
+            const filtered = RECIPES.filter(r => currentCraftFilter === 'all' || r.cat === currentCraftFilter);
+
+            filtered.forEach(recipe => {
+                const canCraft = Object.entries(recipe.req).every(([reqId, count]) => (gameState.inventory[reqId] || 0) >= count);
+
+                const card = document.createElement('div');
+                card.className = `p-3 rounded-xl border flex justify-between items-center ${canCraft ? 'bg-slate-900/80 border-sky-500/30' : 'bg-slate-950/40 border-slate-800 opacity-60'}`;
+
+                let reqHtml = Object.entries(recipe.req).map(([reqId, count]) => {
+                    const has = gameState.inventory[reqId] || 0;
+                    return `<span class="${has >= count ? 'text-sky-300' : 'text-rose-400'}">${ITEMS[reqId]?.name || reqId}: ${has}/${count}</span>`;
+                }).join(' | ');
+
+                const targetItem = ITEMS[recipe.id];
+
+                card.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <div class="text-2xl flex items-center justify-center">${getItemIconHtml(targetItem)}</div>
+                        <div>
+                            <div class="font-bold text-sm text-slate-200">${recipe.name}</div>
+                            <div class="text-[11px] space-x-2">${reqHtml}</div>
+                        </div>
+                    </div>
+                    <button onclick="craftItem('${recipe.id}')" ${canCraft ? '' : 'disabled'} class="px-4 py-2 rounded-lg text-xs font-bold ${canCraft ? 'bg-sky-500 hover:bg-sky-400 text-white glow-btn' : 'bg-slate-800 text-slate-500 cursor-not-allowed'}">
+                        作成
+                    </button>
+                `;
+                list.appendChild(card);
+            });
+        }
+
+        function craftItem(recipeId) {
+            const recipe = RECIPES.find(r => r.id === recipeId);
+            if (!recipe) return;
+
+            const canCraft = Object.entries(recipe.req).every(([reqId, count]) => (gameState.inventory[reqId] || 0) >= count);
+            if (!canCraft) return;
+
+            // Deduct requirements
+            Object.entries(recipe.req).forEach(([reqId, count]) => {
+                gameState.inventory[reqId] -= count;
+                if (gameState.inventory[reqId] <= 0) delete gameState.inventory[reqId];
+            });
+
+            // Add produced item
+            gameState.inventory[recipe.id] = (gameState.inventory[recipe.id] || 0) + 1;
+            AudioFX.playCraft();
+            spawnFloatingText(`${recipe.name}を作成！`, gameState.player.x, gameState.player.y - 30, '#38bdf8');
+
+            updateInventoryUI();
+            updateQuickEquipUI();
+            renderCraftingList();
+            updateQuestTracker();
+        }
+
+        function useItem(id) {
+            const item = ITEMS[id];
+            if (!item || !gameState.inventory[id]) return;
+
+            const p = gameState.player;
+
+            if (item.hunger) p.hunger = Math.min(100, p.hunger + item.hunger);
+            if (item.hydra) p.hydration = Math.min(100, p.hydration + item.hydra);
+            if (item.hp) p.hp = Math.min(p.maxHp, p.hp + item.hp);
+
+            // Food poisoning calculation with specific poisonDmg
+            if (item.poison && Math.random() * 100 < item.poison) {
+                const dmg = item.poisonDmg || 15;
+                p.hp -= dmg;
+                spawnFloatingText(`食中毒! HP -${dmg}`, p.x, p.y - 30, '#f87171');
+                if (p.hp <= 0) {
+                    p.hp = 0;
+                    triggerDeath('食中毒による体調悪化');
+                }
+            } else {
+                let msg = '回復!';
+                if (item.hunger) msg = `満腹度+${item.hunger}`;
+                else if (item.hydra) msg = `水分+${item.hydra}`;
+                spawnFloatingText(msg, p.x, p.y - 30, '#4ade80');
+            }
+
+            gameState.inventory[id]--;
+            if (gameState.inventory[id] <= 0) delete gameState.inventory[id];
+
+            updateInventoryUI();
+            updateQuickEquipUI();
+            selectItemDetail(id);
+        }
+
+        function toggleInventory() {
+            const modal = document.getElementById('inventory-modal');
+            modal.classList.toggle('hidden');
+            if (!modal.classList.contains('hidden')) {
+                updateInventoryUI();
+                renderCraftingList();
+            }
+        }
+
+        function updateQuestTracker() {
+            const statusDiv = document.getElementById('quest-items-status');
+            if (!statusDiv) return;
+            const questItems = ['ship_armor', 'ship_fuel', 'ship_battery'];
+            let allDelivered = true;
+
+            statusDiv.innerHTML = questItems.map(id => {
+                const item = ITEMS[id];
+                const delivered = gameState.shipDelivered[id];
+                const hasInInv = (gameState.inventory[id] || 0) > 0;
+                if (!delivered) allDelivered = false;
+
+                return `
+                    <div class="flex items-center justify-between gap-2">
+                        <span>${item.name}</span>
+                        ${delivered ? '<span class="text-emerald-400 font-bold">✓ 納品済</span>' : (hasInInv ? `<button onclick="deliverShipPart('${id}')" class="px-2 py-0.5 bg-amber-500 text-slate-950 font-bold rounded text-[9px] glow-btn">納品可能</button>` : '<span class="text-slate-500">未所持</span>')}
+                    </div>
+                `;
+            }).join('');
+
+            if (allDelivered) {
+                document.getElementById('victory-overlay').classList.remove('hidden');
+            }
+        }
+
+        function deliverShipPart(id) {
+            if ((gameState.inventory[id] || 0) > 0) {
+                gameState.inventory[id]--;
+                if (gameState.inventory[id] <= 0) delete gameState.inventory[id];
+                gameState.shipDelivered[id] = true;
+                AudioFX.playCraft();
+                spawnFloatingText('宇宙船パーツ納品完了！', gameState.player.x, gameState.player.y - 40, '#facc15');
+                updateInventoryUI();
+                updateQuestTracker();
+            }
+        }
+
+        function spawnParticles(x, y, color, count = 5) {
+            for (let i = 0; i < count; i++) {
+                gameState.particles.push({
+                    x, y,
+                    vx: (Math.random() - 0.5) * 120,
+                    vy: (Math.random() - 0.5) * 120,
+                    life: 0.4,
+                    maxLife: 0.4,
+                    color
+                });
+            }
+        }
+
+        function spawnFloatingText(text, x, y, color = '#ffffff') {
+            gameState.floatingTexts.push({
+                text, x, y,
+                vy: -30,
+                life: 1.2,
+                color
+            });
+        }
+
+        function triggerDeath(reason) {
+            if (gameState.isDead) return;
+            gameState.isDead = true;
+            gameState.deadReason = reason;
+
+            AudioFX.playDeath();
+            spawnParticles(gameState.player.x, gameState.player.y, '#f87171', 25);
+
+            document.getElementById('death-reason').innerText = reason;
+            document.getElementById('death-overlay').classList.remove('hidden');
+
+            // Respawn after 3.5 seconds
+            setTimeout(() => {
+                respawnPlayer();
+            }, 3500);
+        }
+
+        function respawnPlayer() {
+            const p = gameState.player;
+            p.hp = p.maxHp;
+            p.hunger = 100;
+            p.hydration = 100;
+            p.x = 10 * TILE_SIZE;
+            p.y = 10 * TILE_SIZE;
+            p.vx = 0;
+            p.vy = 0;
+            p.invincibleTimer = 3.0; // 3s invincibility
+            gameState.ecoBuffTimer = 30; // Grant 30s Eco-mode buff
+            gameState.mapType = 'surface';
+            gameState.isDead = false;
+
+            document.getElementById('death-overlay').classList.add('hidden');
+            document.getElementById('hud-location').innerText = '地上（氷原）';
+            spawnFloatingText('宇宙船前で無事復活！', p.x, p.y - 30, '#38bdf8');
+        }
+
+        let lastTime = performance.now();
+
+        function gameLoop(now) {
+            let dt = (now - lastTime) / 1000;
+            lastTime = now;
+
+            // Safety guard against massive delta-time spikes (e.g. initial start, tab switch)
+            if (dt > 0.1) dt = 0.1;
+
+            update(dt);
+            render();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        function update(dt) {
+            if (gameState.isDead) return;
+
+            const p = gameState.player;
+            const charDef = CHARACTERS[gameState.charType];
+
+            // 1. Eco Mode Buff Timer
+            if (gameState.ecoBuffTimer > 0) {
+                gameState.ecoBuffTimer -= dt;
+                document.getElementById('eco-buff-badge').classList.remove('hidden');
+                document.getElementById('eco-time').innerText = `${Math.ceil(gameState.ecoBuffTimer)}s`;
+            } else {
+                document.getElementById('eco-buff-badge').classList.add('hidden');
+            }
+
+            // 2. Invincibility Timer
+            if (p.invincibleTimer > 0) p.invincibleTimer -= dt;
+
+            // 3. Continuous Action Hold Check
+            if (isActionPressed) {
+                handleAction();
+            }
+
+            // 4. Movement Input Logic
+            let inputX = 0;
+            let inputY = 0;
+
+            if (gameState.keys['ArrowUp'] || gameState.keys['KeyW']) inputY -= 1;
+            if (gameState.keys['ArrowDown'] || gameState.keys['KeyS']) inputY += 1;
+            if (gameState.keys['ArrowLeft'] || gameState.keys['KeyA']) inputX -= 1;
+            if (gameState.keys['ArrowRight'] || gameState.keys['KeyD']) inputX += 1;
+
+            if (inputX !== 0 && inputY !== 0) {
+                inputX *= 0.7071;
+                inputY *= 0.7071;
+            }
+
+            // Physics: Ice sliding (surface) vs Normal walking (cave)
+            const speed = charDef.speed;
+            if (gameState.mapType === 'surface') {
+                // Ice physics (Inertia & Sliding)
+                const accel = 600;
+                const friction = 0.94;
+                p.vx += inputX * accel * dt;
+                p.vy += inputY * accel * dt;
+                p.vx *= friction;
+                p.vy *= friction;
+            } else {
+                // Cave physics (Direct movement, no sliding)
+                p.vx = inputX * speed;
+                p.vy = inputY * speed;
+            }
+
+            // Map Bounds & Cave Wall Collisions
+            let nextX = p.x + p.vx * dt;
+            let nextY = p.y + p.vy * dt;
+
+            if (gameState.mapType === 'cave') {
+                const c = Math.floor(nextX / TILE_SIZE);
+                const r = Math.floor(nextY / TILE_SIZE);
+                if (r >= 0 && r < MAP_SIZE && c >= 0 && c < MAP_SIZE && !gameState.caveWalls[r][c]) {
+                    p.x = nextX;
+                    p.y = nextY;
+                } else {
+                    p.vx = 0;
+                    p.vy = 0;
+                }
+            } else {
+                p.x = Math.max(TILE_SIZE, Math.min((MAP_SIZE - 1) * TILE_SIZE, nextX));
+                p.y = Math.max(TILE_SIZE, Math.min((MAP_SIZE - 1) * TILE_SIZE, nextY));
+            }
+
+            // 5. Hunger & Hydration Depletion
+            const ecoMult = gameState.ecoBuffTimer > 0 ? (1 / 3) : 1.0;
+            p.hunger -= 0.6 * charDef.hungerRate * ecoMult * dt;
+            p.hydration -= 0.9 * charDef.hydraRate * ecoMult * dt;
+
+            if (p.hunger <= 0) {
+                p.hunger = 0;
+                p.hp -= 4 * dt;
+                if (p.hp <= 0) triggerDeath('餓死（満腹度の枯渇）');
+            }
+            if (p.hydration <= 0) {
+                p.hydration = 0;
+                p.hp -= 5 * dt;
+                if (p.hp <= 0) triggerDeath('脱水症状（水分の枯渇）');
+            }
+
+            // 6. Enemy AI & Attack Handling
+            gameState.enemies.forEach(e => {
+                if (e.map !== gameState.mapType) return;
+
+                const dist = Math.hypot(p.x - e.x, p.y - e.y);
+                const hasSight = hasLineOfSight(e.x, e.y, p.x, p.y);
+
+                // Enemies pursue player if within sight
+                if (dist < 220 && hasSight) {
+                    const angle = Math.atan2(p.y - e.y, p.x - e.x);
+                    const eSpeed = e.type === 'cave_monster' ? 110 : 80;
+                    e.x += Math.cos(angle) * eSpeed * dt;
+                    e.y += Math.sin(angle) * eSpeed * dt;
+
+                    // Melee Damage Check (with invincibility cooldown)
+                    if (dist < 28 && p.invincibleTimer <= 0) {
+                        p.hp -= e.atk;
+                        p.invincibleTimer = 0.8; // 0.8s hit cooldown & blinking
+                        AudioFX.playHit();
+                        spawnFloatingText(`HP -${e.atk}`, p.x, p.y - 25, '#f87171');
+                        spawnParticles(p.x, p.y, '#f87171', 8);
+
+                        if (p.hp <= 0) {
+                            p.hp = 0;
+                            triggerDeath(`${e.type === 'cave_monster' ? '洞窟のモンスター' : '原生生物'}からの攻撃`);
+                        }
+                    }
+                }
+            });
+
+            // Clean dead enemies & depleted resources
+            gameState.enemies = gameState.enemies.filter(e => e.hp > 0);
+            gameState.resources = gameState.resources.filter(r => r.hp > 0);
+
+            // Update Particles & Floating Text
+            gameState.particles.forEach(pt => {
+                pt.x += pt.vx * dt;
+                pt.y += pt.vy * dt;
+                pt.life -= dt;
+            });
+            gameState.particles = gameState.particles.filter(pt => pt.life > 0);
+
+            gameState.floatingTexts.forEach(ft => {
+                ft.y += ft.vy * dt;
+                ft.life -= dt;
+            });
+            gameState.floatingTexts = gameState.floatingTexts.filter(ft => ft.life > 0);
+
+            // Update HUD Bars
+            document.getElementById('hp-bar').style.width = `${Math.max(0, (p.hp / p.maxHp) * 100)}%`;
+            document.getElementById('hp-text').innerText = `${Math.ceil(p.hp)}/${p.maxHp}`;
+
+            document.getElementById('hunger-bar').style.width = `${Math.max(0, p.hunger)}%`;
+            document.getElementById('hunger-text').innerText = `${Math.ceil(p.hunger)}%`;
+
+            document.getElementById('hydration-bar').style.width = `${Math.max(0, p.hydration)}%`;
+            document.getElementById('hydration-text').innerText = `${Math.ceil(p.hydration)}%`;
+        }
+
+        function render() {
+            const canvas = document.getElementById('gameCanvas');
+            const ctx = canvas.getContext('2d');
+
+            if (canvas.width !== window.innerWidth || canvas.height !== window.innerHeight) {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+            }
+
+            const p = gameState.player;
+            const offsetX = canvas.width / 2 - p.x;
+            const offsetY = canvas.height / 2 - p.y;
+
+            // Background Floor Rendering
+            ctx.fillStyle = gameState.mapType === 'surface' ? '#0f172a' : '#18181b';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.save();
+            ctx.translate(offsetX, offsetY);
+
+            // Grid Lines & Tiles
+            if (gameState.mapType === 'surface') {
+                // Ice Ice surface grid
+                ctx.strokeStyle = 'rgba(56, 189, 248, 0.08)';
+                ctx.lineWidth = 1;
+                for (let x = 0; x <= MAP_SIZE * TILE_SIZE; x += TILE_SIZE) {
+                    ctx.beginPath();
+                    ctx.moveTo(x, 0);
+                    ctx.lineTo(x, MAP_SIZE * TILE_SIZE);
+                    ctx.stroke();
+                }
+                for (let y = 0; y <= MAP_SIZE * TILE_SIZE; y += TILE_SIZE) {
+                    ctx.beginPath();
+                    ctx.moveTo(0, y);
+                    ctx.lineTo(MAP_SIZE * TILE_SIZE, y);
+                    ctx.stroke();
+                }
+
+                // Cave Entrance Portal
+                ctx.fillStyle = '#a855f7';
+                ctx.beginPath();
+                ctx.arc(3 * TILE_SIZE, 3 * TILE_SIZE, 24, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#f3e8ff';
+                ctx.font = '10px Zen Kaku Gothic New';
+                ctx.textAlign = 'center';
+                ctx.fillText('洞窟入口', 3 * TILE_SIZE, 3 * TILE_SIZE + 36);
+
+            } else {
+                // Cave map rendering (Dirt & Solid Walls)
+                for (let r = 0; r < MAP_SIZE; r++) {
+                    for (let c = 0; c < MAP_SIZE; c++) {
+                        if (gameState.caveWalls[r][c]) {
+                            ctx.fillStyle = '#27272a';
+                            ctx.fillRect(c * TILE_SIZE, r * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                            ctx.strokeStyle = '#3f3f46';
+                            ctx.strokeRect(c * TILE_SIZE, r * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                        } else {
+                            ctx.fillStyle = '#3f3f46';
+                            ctx.fillRect(c * TILE_SIZE + 2, r * TILE_SIZE + 2, TILE_SIZE - 4, TILE_SIZE - 4);
+                        }
+                    }
+                }
+
+                // Surface Portal Exit inside cave
+                ctx.fillStyle = '#38bdf8';
+                ctx.beginPath();
+                ctx.arc(2 * TILE_SIZE, 2 * TILE_SIZE, 20, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Structures (Spaceship)
+            gameState.structures.forEach(st => {
+                if (gameState.mapType === 'surface' && st.type === 'spaceship') {
+                    ctx.fillStyle = '#64748b';
+                    ctx.beginPath();
+                    ctx.arc(st.x, st.y, 35, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.strokeStyle = '#38bdf8';
+                    ctx.lineWidth = 3;
+                    ctx.stroke();
+
+                    ctx.fillStyle = '#e2e8f0';
+                    ctx.font = 'bold 12px Zen Kaku Gothic New';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('墜落した宇宙船（セーブ地点）', st.x, st.y - 45);
+                }
+            });
+
+            // Resources
+            gameState.resources.forEach(r => {
+                if (gameState.mapType !== 'surface') return;
+
+                if (r.type === 'tree') {
+                    ctx.fillStyle = '#15803d';
+                    ctx.beginPath();
+                    ctx.arc(r.x, r.y, 18, 0, Math.PI * 2);
+                    ctx.fill();
+                } else if (r.type === 'rock') {
+                    ctx.fillStyle = '#64748b';
+                    ctx.fillRect(r.x - 14, r.y - 14, 28, 28);
+                } else if (r.type === 'ice_node') {
+                    ctx.fillStyle = '#a5f3fc';
+                    ctx.fillRect(r.x - 12, r.y - 12, 24, 24);
+                } else if (r.type === 'iron_node') {
+                    ctx.fillStyle = '#d97706';
+                    ctx.fillRect(r.x - 14, r.y - 14, 28, 28);
+                } else if (r.type === 'gold_node') {
+                    ctx.fillStyle = '#eab308';
+                    ctx.fillRect(r.x - 14, r.y - 14, 28, 28);
+                }
+
+                // Health bar above node
+                if (r.hp < r.maxHp) {
+                    ctx.fillStyle = '#1e293b';
+                    ctx.fillRect(r.x - 15, r.y - 25, 30, 4);
+                    ctx.fillStyle = '#38bdf8';
+                    ctx.fillRect(r.x - 15, r.y - 25, 30 * (r.hp / r.maxHp), 4);
+                }
+            });
+
+            // Enemies
+            gameState.enemies.forEach(e => {
+                if (e.map !== gameState.mapType) return;
+
+                ctx.fillStyle = e.type === 'cave_monster' ? '#c084fc' : '#f87171';
+                ctx.beginPath();
+                ctx.arc(e.x, e.y, e.type === 'cave_monster' ? 16 : 14, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Health bar
+                ctx.fillStyle = '#1e293b';
+                ctx.fillRect(e.x - 15, e.y - 24, 30, 4);
+                ctx.fillStyle = '#ef4444';
+                ctx.fillRect(e.x - 15, e.y - 24, 30 * (e.hp / e.maxHp), 4);
+            });
+
+            // Player Render (With blinking during invincibility)
+            if (p.invincibleTimer <= 0 || Math.floor(performance.now() / 100) % 2 === 0) {
+                ctx.fillStyle = gameState.charType === 'robot' ? '#06b6d4' : (gameState.charType === 'cyborg' ? '#10b981' : '#38bdf8');
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 16, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                // Player directional indicator
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.arc(p.x + p.vx * 0.05, p.y + p.vy * 0.05, 4, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Particles
+            gameState.particles.forEach(pt => {
+                ctx.fillStyle = pt.color;
+                ctx.globalAlpha = pt.life / pt.maxLife;
+                ctx.fillRect(pt.x, pt.y, 4, 4);
+                ctx.globalAlpha = 1.0;
+            });
+
+            // Floating Texts
+            ctx.font = 'bold 12px Zen Kaku Gothic New';
+            ctx.textAlign = 'center';
+            gameState.floatingTexts.forEach(ft => {
+                ctx.fillStyle = ft.color;
+                ctx.fillText(ft.text, ft.x, ft.y);
+            });
+
+            ctx.restore();
+        }
+
+        /* INPUT LISTENERS & TOUCH BINDINGS */
+        window.addEventListener('keydown', e => {
+            gameState.keys[e.code] = true;
+            if (e.code === 'Space') {
+                if (!isActionPressed) {
+                    isActionPressed = true;
+                    handleAction();
+                }
+            }
+            if (e.code === 'KeyI') toggleInventory();
+        });
+
+        window.addEventListener('keyup', e => {
+            gameState.keys[e.code] = false;
+            if (e.code === 'Space') {
+                isActionPressed = false;
+            }
+        });
+
+        // Canvas Direct Click & Touch Control for Instant & Continuous Action
+        const canvas = document.getElementById('gameCanvas');
+        let isPointerDown = false;
+        let lastPointerPos = { x: 0, y: 0 };
+
+        function getWorldPosFromScreen(screenX, screenY) {
+            const rect = canvas.getBoundingClientRect();
+            const p = gameState.player;
+            const worldX = (screenX - rect.left) - canvas.width / 2 + p.x;
+            const worldY = (screenY - rect.top) - canvas.height / 2 + p.y;
+            return { x: worldX, y: worldY };
+        }
+
+        // Mouse Listeners
+        canvas.addEventListener('mousedown', (e) => {
+            if (e.button !== 0) return;
+            isPointerDown = true;
+            isActionPressed = true;
+            lastPointerPos = { x: e.clientX, y: e.clientY };
+            const wPos = getWorldPosFromScreen(e.clientX, e.clientY);
+            handleAction(wPos.x, wPos.y);
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (isPointerDown) {
+                lastPointerPos = { x: e.clientX, y: e.clientY };
+            }
+        });
+
+        window.addEventListener('mouseup', () => {
+            isPointerDown = false;
+            isActionPressed = false;
+        });
+
+        // Touch Listeners for Canvas
+        canvas.addEventListener('touchstart', (e) => {
+            if (e.touches.length > 0) {
+                isPointerDown = true;
+                isActionPressed = true;
+                const touch = e.touches[0];
+                lastPointerPos = { x: touch.clientX, y: touch.clientY };
+                const wPos = getWorldPosFromScreen(touch.clientX, touch.clientY);
+                handleAction(wPos.x, wPos.y);
+            }
+        }, { passive: true });
+
+        canvas.addEventListener('touchmove', (e) => {
+            if (isPointerDown && e.touches.length > 0) {
+                const touch = e.touches[0];
+                lastPointerPos = { x: touch.clientX, y: touch.clientY };
+            }
+        }, { passive: true });
+
+        window.addEventListener('touchend', () => {
+            isPointerDown = false;
+            isActionPressed = false;
+        });
+
+        window.addEventListener('touchcancel', () => {
+            isPointerDown = false;
+            isActionPressed = false;
+        });
+
+        // Touch Control Bindings for Mobile D-Pad Buttons
+        function bindTouchButton(elementId, code) {
+            const btn = document.getElementById(elementId);
+            if (!btn) return;
+            const startHandler = (e) => {
+                e.preventDefault();
+                gameState.keys[code] = true;
+            };
+            const endHandler = (e) => {
+                e.preventDefault();
+                gameState.keys[code] = false;
+            };
+
+            btn.addEventListener('touchstart', startHandler);
+            btn.addEventListener('touchend', endHandler);
+            btn.addEventListener('touchcancel', endHandler);
+            btn.addEventListener('mousedown', startHandler);
+            btn.addEventListener('mouseup', endHandler);
+            btn.addEventListener('mouseleave', endHandler);
+        }
+
+        bindTouchButton('btn-up', 'ArrowUp');
+        bindTouchButton('btn-down', 'ArrowDown');
+        bindTouchButton('btn-left', 'ArrowLeft');
+        bindTouchButton('btn-right', 'ArrowRight');
+
+        const btnAction = document.getElementById('btn-action');
+        if (btnAction) {
+            const startAction = (e) => {
+                e.preventDefault();
+                if (!isActionPressed) {
+                    isActionPressed = true;
+                    handleAction();
+                }
+            };
+            const stopAction = (e) => {
+                e.preventDefault();
+                isActionPressed = false;
+                isPointerDown = false;
+            };
+
+            btnAction.addEventListener('touchstart', startAction);
+            btnAction.addEventListener('touchend', stopAction);
+            btnAction.addEventListener('touchcancel', stopAction);
+            btnAction.addEventListener('mousedown', startAction);
+            btnAction.addEventListener('mouseup', stopAction);
+            btnAction.addEventListener('mouseleave', stopAction);
+        }
+    </script>
+</body>
+</html>
